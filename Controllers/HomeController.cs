@@ -21,6 +21,10 @@ namespace LotteryApp.Controllers
 
         public IActionResult Index()
         {
+            if (Request.Cookies["UserID"] == default)
+            {
+                Response.Cookies.Append("UserID", Guid.NewGuid().ToString());
+            }
             return View();
         }
 

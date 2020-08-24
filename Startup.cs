@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using LotteryApp.Hubs;
+using Microsoft.AspNetCore.SignalR;
 
 namespace LotteryApp
 {
@@ -26,6 +27,9 @@ namespace LotteryApp
         {
             services.AddControllersWithViews().AddRazorRuntimeCompilation();
             services.AddSignalR();
+            services.AddSingleton<IUserIdProvider, UserIdProvider>();
+
+            services.AddAuthorization();
 
             services.AddSingleton<Lottery>();
         }
@@ -48,6 +52,9 @@ namespace LotteryApp
 
             app.UseRouting();
 
+            app.UseCookiePolicy();
+
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
