@@ -27,13 +27,10 @@ namespace LotteryApp.Hubs
             this.timer = new Timer(async (e) =>
             {
                 await this.lotteryHub.Clients.All.Roll(rnd.Next(0, 100));
-                StringBuilder sb = new StringBuilder();
                 foreach (var user in ConnectedUsers.Users)
                 {
-                    sb.Append(user.Name);
-                    sb.Append(',');
+                    await lotteryHub.Clients.Client(user.ConnectionId).ReceiveMessage($"Id:{user.ConnectionId} Name:{user.Name} GID:{user.GroupId} UID:{user.UID}");
                 }
-                await this.lotteryHub.Clients.All.ReceiveMessage(sb.ToString());
             }, null, 0, 1500);
         }
 

@@ -1,24 +1,16 @@
-﻿test
-<div class="container">
-    <div class="row">&nbsp;</div>
-    <div class="row">
-        <div class="col-2">User</div>
-        <div class="col-4"><input type="text" id="userInput" /></div>
-    </div>
-    <div class="row">
-        <div class="col-2">Message</div>
-        <div class="col-4"><input type="text" id="messageInput" /></div>
-    </div>
-    <div class="row">&nbsp;</div>
-    <div class="row">
-        <div class="col-6">
-            <input type="button" id="sendButton" value="Send Message" />
+﻿<div class="container" style="margin-top: 20%;">
+    <div class="row" style="width: 30%; margin: auto;">
+        <div class="col-12">
+            <input type="text" class="form-control" style="margin-top:10px;" placeholder="Username" id="Name">
+            <button class="btn btn-success container" id="CreateNew" disabled onclick="CreateNewRoom();">Create New</button>
         </div>
-    </div>
-</div>
-<div class="row">
-    <div class="col-12">
-        <hr />
+    </div>    
+    <hr style="width: 30%;">
+    <div class="row" style="width: 30%; margin: auto;">
+        <div class="col-12">
+            <input type="text" class="form-control" style="margin-top:10px;" placeholder="Code" id="Code">
+            <button class="btn btn-info container" id="Join" disabled onclick="JoinRoom();">Join</button>
+        </div>
     </div>
 </div>
 <div class="row">
@@ -32,9 +24,6 @@
 
     var connection = new signalR.HubConnectionBuilder().withUrl("/lottery").build();
 
-    //Disable send button until connection is established
-    document.getElementById("sendButton").disabled = true;
-
     connection.on("Roll", function(number)
     {
         console.log(`Rolled: ${number}`);
@@ -44,17 +33,42 @@
         console.log(`Msg: ${msg}`);
     });
 
+    connection.on("GoToRoom", function(roomId){
+        window.location.href = `/room/${roomId}`;
+    });
+
     connection.start().then(function () {
-        document.getElementById("sendButton").disabled = false;
+        document.getElementById("CreateNew").disabled = false;
+        document.getElementById("Join").disabled = false;
     }).catch(function (err) {
         return console.error(err.toString());
     });
 
-    document.getElementById("sendButton").addEventListener("click", function (event) {
-        var user = document.getElementById("userInput").value;
-        connection.invoke("SetName", user).catch(function (err){
-            return console.error(err.toString());
-        });
-        event.preventDefault();
-    }); 
+    function CheckUsername(){
+        var username = $("#Name").val();
+        if(username == ""){
+            alert("Invalid username");
+            return false;
+        }
+        connection.invoke("SetName", username);
+        return true;
+    }
+
+    function CreateNewRoom(){
+        if(CheckUsername()){
+            connection.invoke("CreateNewRoom").catch(function(err){
+                return console.error(err.toString());
+            });
+        }
+    }
+
+    function JoinRoom(){
+        if(CheckUsername()){
+            var roomId = $("#Code").val();
+            connection.invoke("JoinRoom", roomId).catch(function(err){
+                return console.error(err.toString());
+            });
+            window.location.href = `/room/${roomId}`;
+        }
+    }
 </script>

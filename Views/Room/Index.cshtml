@@ -1,0 +1,42 @@
+@model string
+<style>
+    .tile{
+        width: 25%; height: 150px; background-color: #cacaca; margin: 10px;
+    }
+</style>
+<div class="container" id="Tiles">
+</div>
+
+<script src="~/js/signalr/dist/browser/signalr.js"></script>
+<script>
+    "use strict;"
+    var connection = new signalR.HubConnectionBuilder().withUrl("/lottery").build();
+
+    connection.start().then(function(){
+        connection.invoke("JoinedRoom");
+    });
+
+    connection.on("SyncUsers", function(users){
+        console.log(users);
+        BuildTiles(users);
+    });
+
+    connection.on("UserJoined", function(user){
+        console.log("User joined", user);
+        var html = `<div class="tile" id="${user.id}">${user.name}</div>`;
+        $("#Tiles").html($("#Tiles").html() + html);
+    });
+    
+    connection.on("UserLeft", function(user){
+        console.log("User left", user);
+        $(`#${user.id}`).remove();
+    });
+
+    function BuildTiles(users){
+        var html = "";
+        for(var i = 0; i<users.length; i++){
+            html += `<div class="tile" id="${users[i].id}">${users[i].name}</div>`;
+        }
+        $("#Tiles").html(html);
+    }
+</script>
