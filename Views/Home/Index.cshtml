@@ -30,7 +30,10 @@
     });
 
     connection.on("ReceiveMessage", function(msg){
-        console.log(`Msg: ${msg}`);
+        if(msg == "InvalidGroup"){
+            var roomId = $("#Code").val();
+            alert(`Room ${roomId} does not exist`);
+        }
     });
 
     connection.on("GoToRoom", function(roomId){
@@ -68,7 +71,7 @@
             connection.invoke("JoinRoom", roomId).catch(function(err){
                 return console.error(err.toString());
             });
-            window.location.href = `/room/${roomId}`;
+            //window.location.href = `/room/${roomId}`;
         }
     }
 </script>

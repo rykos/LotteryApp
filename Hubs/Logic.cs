@@ -22,7 +22,6 @@ namespace LotteryApp.Hubs
 
         public async void QWE()
         {
-            Console.WriteLine("Ran QWE");
             Random rnd = new Random();
             this.timer = new Timer(async (e) =>
             {
@@ -38,7 +37,12 @@ namespace LotteryApp.Hubs
         {
             this.purgeUsersTimer = new Timer((e) =>
             {
-                ConnectedUsers.Users.RemoveWhere(x => x.Disconnected && x.ExpirationTime < DateTime.Now);
+                User[] users = ConnectedUsers.Users.Where(x => x.Disconnected && x.ExpirationTime < DateTime.Now).ToArray();
+                foreach(User user in users)
+                {
+                    ActiveGroups.RemoveUserFromGroup(user.GroupId, user);
+                }
+                ConnectedUsers.Users.Where(x => x.Disconnected && x.ExpirationTime < DateTime.Now).ToArray();
             }, null, 0, 60000);
         }
     }

@@ -59,13 +59,19 @@ namespace LotteryApp.Hubs
 
         public async Task JoinRoom(string groupId)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, groupId);
             var user = ConnectedUsers.Users.FirstOrDefault(x => x.UID == Context.UserIdentifier);
-            if (user != default)
+            if (user != default)//user exist
             {
-                user.GroupId = groupId;
+                if (ActiveGroups.GetGroup(groupId) != default)//Group exist
+                {
+                    AddToGroup(groupId, user);
+                    await Clients.Caller.GoToRoom(groupId);
+                }
+                else
+                {
+                    await Clients.Caller.ReceiveMessage("InvalidGroup");
+                }
             }
-            await Clients.Caller.GoToRoom(groupId);
         }
 
         public async Task CreateNewRoom()
@@ -74,9 +80,9 @@ namespace LotteryApp.Hubs
             do
             {
                 groupId = new string(Guid.NewGuid().ToString().Take(5).ToArray());
-            } while (ConnectedUsers.Users.Select(x => x.GroupId).Contains(groupId));
-            ConnectedUsers.Users.FirstOrDefault(x => x.ConnectionId == Context.ConnectionId).GroupId = groupId;
-            await Clients.Caller.GoToRoom(groupId);
+            } while (ActiveGroups.Groups.Select(x => x.Id).Contains(groupId));//Ensure that group id does not exist
+            CreateGroup(groupId, ConnectedUsers.GetUser(Context.ConnectionId));
+            await Clients.Caller.GoToRoom(groupId);//Redirects user to room
         }
 
         public override async Task OnConnectedAsync()
@@ -89,7 +95,7 @@ namespace LotteryApp.Hubs
                 user.Principal = Context.User;
                 if (user.GroupId != default)
                 {
-                    await Groups.AddToGroupAsync(Context.ConnectionId, user.GroupId);
+                    AddToGroup(user.GroupId, user);
                 }
             }
             else
@@ -108,6 +114,25 @@ namespace LotteryApp.Hubs
             user.ExpirationTime = DateTime.Now.AddMinutes(1);
             await this.LeftRoom();
             await base.OnDisconnectedAsync(exception);
+        }
+
+        private async void AddToGroup(string groupId, User user)
+        {
+            if (user.GroupId != default && groupId != user.GroupId)
+            {
+                ActiveGroups.RemoveUserFromGroup(user.GroupId, user);
+            }
+            if (groupId != user.GroupId)
+            {
+                ActiveGroups.AddUserToGroup(groupId, user);
+            }
+            await Groups.AddToGroupAsync(user.ConnectionId, groupId);
+        }
+
+        private async void CreateGroup(string groupId, User creator)
+        {
+            ActiveGroups.CreateGroup(groupId, creator);
+            await Groups.AddToGroupAsync(creator.ConnectionId, groupId);
         }
 
         private object UserToTransport(User user)
@@ -148,6 +173,50 @@ namespace LotteryApp.Hubs
         }
     }
 
+    public static class ActiveGroups
+    {
+        public static HashSet<Group> Groups = new HashSet<Group>();
+
+        public static void CreateGroup(string groupId, User creator)
+        {
+            if (GetGroup(groupId) == default)
+            {
+                Group newGroup = new Group(groupId, creator);
+                Groups.Add(newGroup);
+                newGroup.Creator = creator;
+                AddUserToGroup(newGroup.Id, creator);
+            }
+        }
+
+        public static void AddUserToGroup(string groupId, User user)
+        {
+            if (user.GroupId != default)
+            {
+                RemoveUserFromGroup(user.GroupId, user);
+            }
+            Group group = GetGroup(groupId);
+            group.Users.Add(user);
+            user.GroupId = groupId;
+        }
+
+        public static void RemoveUserFromGroup(string groupId, User user)
+        {
+            Group group = GetGroup(groupId);
+            group.Users.Remove(user);
+            user.GroupId = default;
+            if (group.Users.Count() == 0)
+            {
+                Groups.Remove(group);
+                Console.WriteLine($"Room {groupId} destroyed, Rooms={ActiveGroups.Groups.Count}");
+            }
+        }
+
+        public static Group GetGroup(string groupId)
+        {
+            return Groups.FirstOrDefault(x => x.Id == groupId);
+        }
+    }
+
     public class User
     {
         public string Name;//User name
@@ -163,6 +232,19 @@ namespace LotteryApp.Hubs
             UID = uID;
             Principal = principal;
             this.Id = Guid.NewGuid().ToString();
+        }
+    }
+
+    public class Group
+    {
+        public string Id;//Public id
+        public User Creator;//User that created this room
+        public HashSet<User> Users = new HashSet<User>();//Connected users
+
+        public Group(string groupId, User creator)
+        {
+            this.Id = groupId;
+            this.Creator = creator;
         }
     }
 }
