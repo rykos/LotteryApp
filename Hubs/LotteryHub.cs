@@ -202,49 +202,21 @@ namespace LotteryApp.Hubs
         public static void RemoveUserFromGroup(string groupId, User user)
         {
             Group group = GetGroup(groupId);
-            group.Users.Remove(user);
-            user.GroupId = default;
-            if (group.Users.Count() == 0)
+            if (group != default)
             {
-                Groups.Remove(group);
-                Console.WriteLine($"Room {groupId} destroyed, Rooms={ActiveGroups.Groups.Count}");
+                group.Users.Remove(user);
+                user.GroupId = default;
+                if (group.Users.Count() == 0)
+                {
+                    Groups.Remove(group);
+                    Console.WriteLine($"Room {groupId} destroyed, Rooms={ActiveGroups.Groups.Count}");
+                }
             }
         }
 
         public static Group GetGroup(string groupId)
         {
             return Groups.FirstOrDefault(x => x.Id == groupId);
-        }
-    }
-
-    public class User
-    {
-        public string Name;//User name
-        public string Id;//Public id
-        public string ConnectionId;//ConnectionId
-        public string UID;//User Identifier
-        public string GroupId;//Group id
-        public ClaimsPrincipal Principal;
-        public DateTime ExpirationTime;
-        public bool Disconnected = false;
-        public User(string uID, ClaimsPrincipal principal)
-        {
-            UID = uID;
-            Principal = principal;
-            this.Id = Guid.NewGuid().ToString();
-        }
-    }
-
-    public class Group
-    {
-        public string Id;//Public id
-        public User Creator;//User that created this room
-        public HashSet<User> Users = new HashSet<User>();//Connected users
-
-        public Group(string groupId, User creator)
-        {
-            this.Id = groupId;
-            this.Creator = creator;
         }
     }
 }
